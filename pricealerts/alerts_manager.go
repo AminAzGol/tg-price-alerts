@@ -24,6 +24,14 @@ type Alert struct {
 	LastPriceRelation PriceRelation
 }
 
+func (a Alert) String() string {
+	if a.AlertOn == Above {
+		return fmt.Sprintf("%s above %.3f", a.Ticker, a.TargetPrice)
+	} else {
+		return fmt.Sprintf("%s below %.3f", a.Ticker, a.TargetPrice)
+	}
+}
+
 type AlertManager struct {
 	Alerts []Alert
 	Api    *kucoin.ApiService
@@ -106,17 +114,26 @@ func NewAlertManager() *AlertManager {
 	am := AlertManager{Api: s}
 	return &am
 }
-func NotifyAlertFired(alert *Alert) {
+func NotifyAlertFired(alert *Alert) string {
+	var text string
 	if alert.AlertOn == Above {
-		log.Printf("Alert fired: %s went above %f", alert.Ticker, alert.TargetPrice)
+		text = fmt.Sprintf("Alert fired: %s went above %f", alert.Ticker, alert.TargetPrice)
 	} else {
-		log.Printf("Alert fired: %s went below %f", alert.Ticker, alert.TargetPrice)
+		text = fmt.Sprintf("Alert fired: %s went below %f", alert.Ticker, alert.TargetPrice)
 	}
+	log.Print(text)
+	return text
 }
 
-func (am *AlertManager) removeAlert(i int) []Alert {
+func (am *AlertManager) RemoveAlert(i int) ([]Alert, error) {
+	if len(am.Alerts) == 0 {
+		return nil, errors.New("no alerts to remove")
+	}
+	if i < 0 || i >= len(am.Alerts) {
+		return nil, errors.New("index out of rage")
+	}
 	am.Alerts = append(am.Alerts[:i], am.Alerts[i+1:]...)
-	return am.Alerts
+	return am.Alerts, nil
 }
 
 func (am *AlertManager) AlertCheckEngineStart(ch chan string) error {
@@ -129,11 +146,12 @@ func (am *AlertManager) AlertCheckEngineStart(ch chan string) error {
 				return err
 			}
 			if fired {
-				NotifyAlertFired(&alert)
-				am.removeAlert(i)
+				text := NotifyAlertFired(&alert)
+				ch <- text
+				am.RemoveAlert(i)
 			}
 
-			ch <- fmt.Sprintf("Alert %s on %f checked, fired: %v", alert.Ticker, alert.TargetPrice, fired)
+			// ch <- fmt.Sprintf("Alert %s on %f checked, fired: %v", alert.Ticker, alert.TargetPrice, fired)
 
 		}
 	}

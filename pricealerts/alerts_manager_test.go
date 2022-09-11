@@ -70,7 +70,7 @@ func TestRemoveAlert(t *testing.T) {
 		t.Fatalf("AlertList length is incorrect. want: %d got: %d", 2, len(am.Alerts))
 	}
 
-	am.removeAlert(0)
+	am.RemoveAlert(0)
 	if len(am.Alerts) != 1 {
 		t.Fatalf("AlertList length is incorrect. want: %d got: %d", 1, len(am.Alerts))
 	}
